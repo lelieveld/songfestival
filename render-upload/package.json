@@ -1,0 +1,17 @@
+{
+  "name": "ted-tio-songfestival-speelkopie",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Online Songfestival voorspellingenpoule met gedeelde link.",
+  "dependencies": {
+    "@google-cloud/firestore": "^7.11.0",
+    "pg": "^8.13.1"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "wifi": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

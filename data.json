@@ -1,0 +1,210 @@
+{
+  "countries": [
+    {
+      "name": "Albanie",
+      "entry": "Alis - Nan"
+    },
+    {
+      "name": "Armenie",
+      "entry": "SIMON - Paloma Rumba"
+    },
+    {
+      "name": "Australie",
+      "entry": "Delta Goodrem - Eclipse"
+    },
+    {
+      "name": "Oostenrijk",
+      "entry": "COSMO - Tanzschein"
+    },
+    {
+      "name": "Azerbeidzjan",
+      "entry": "JIVA - Just Go"
+    },
+    {
+      "name": "Belgie",
+      "entry": "ESSYLA - Dancing on the Ice"
+    },
+    {
+      "name": "Bulgarije",
+      "entry": "DARA - Bangaranga"
+    },
+    {
+      "name": "Kroatie",
+      "entry": "LELEK - Andromeda"
+    },
+    {
+      "name": "Cyprus",
+      "entry": "Antigoni - JALLA"
+    },
+    {
+      "name": "Tsjechie",
+      "entry": "Daniel Zizka - CROSSROADS"
+    },
+    {
+      "name": "Denemarken",
+      "entry": "Soren Torpegaard Lund - For Vi Gar Hjem"
+    },
+    {
+      "name": "Estland",
+      "entry": "Vanilla Ninja - Too Epic To Be True"
+    },
+    {
+      "name": "Finland",
+      "entry": "Linda Lampenius x Pete Parkkonen - Liekinheitin"
+    },
+    {
+      "name": "Frankrijk",
+      "entry": "Monroe - Regarde!"
+    },
+    {
+      "name": "Georgie",
+      "entry": "Bzikebi - On Replay"
+    },
+    {
+      "name": "Duitsland",
+      "entry": "Sarah Engels - Fire"
+    },
+    {
+      "name": "Griekenland",
+      "entry": "Akylas - Ferto"
+    },
+    {
+      "name": "Israel",
+      "entry": "Noam Bettan - Michelle"
+    },
+    {
+      "name": "Italie",
+      "entry": "Sal Da Vinci - Per Sempre Si"
+    },
+    {
+      "name": "Letland",
+      "entry": "Atvara - Ena"
+    },
+    {
+      "name": "Litouwen",
+      "entry": "Lion Ceccah - Solo Quiero Mas"
+    },
+    {
+      "name": "Luxemburg",
+      "entry": "Eva Marija - Mother Nature"
+    },
+    {
+      "name": "Malta",
+      "entry": "AIDAN - Bella"
+    },
+    {
+      "name": "Moldavie",
+      "entry": "Satoshi - Viva, Moldova!"
+    },
+    {
+      "name": "Montenegro",
+      "entry": "Tamara Zivkovic - Nova Zora"
+    },
+    {
+      "name": "Noorwegen",
+      "entry": "JONAS LOVV - YA YA YA"
+    },
+    {
+      "name": "Polen",
+      "entry": "ALICJA - Pray"
+    },
+    {
+      "name": "Portugal",
+      "entry": "Bandidos do Cante - Rosa"
+    },
+    {
+      "name": "Roemenie",
+      "entry": "Alexandra Capitanescu - Choke Me"
+    },
+    {
+      "name": "San Marino",
+      "entry": "SENHIT - Superstar"
+    },
+    {
+      "name": "Servie",
+      "entry": "LAVINA - Kraj Mene"
+    },
+    {
+      "name": "Zweden",
+      "entry": "FELICIA - My System"
+    },
+    {
+      "name": "Zwitserland",
+      "entry": "Veronica Fusaro - Alice"
+    },
+    {
+      "name": "Oekraine",
+      "entry": "LELEKA - Ridnym"
+    },
+    {
+      "name": "Verenigd Koninkrijk",
+      "entry": "LOOK MUM NO COMPUTER - Eins, Zwei, Drei"
+    }
+  ],
+  "participants": [
+    {
+      "id": "33f48bee-cb3f-4133-af1f-035ff17cc692",
+      "name": "Tio",
+      "attendingParty": false,
+      "prediction": {
+        "top5": [
+          "Australie",
+          "Kroatie",
+          "Cyprus",
+          "Duitsland",
+          "Griekenland"
+        ],
+        "last": "Polen",
+        "semi1": [],
+        "semi2": []
+      },
+      "createdAt": "2026-05-01T19:57:59.955Z"
+    }
+  ],
+  "actualResult": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "semiQualifiers": {
+    "semi1": [],
+    "semi2": []
+  },
+  "votingClosed": {
+    "semi1": false,
+    "semi2": false,
+    "final": false
+  }
+}

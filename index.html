@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ted &amp; Tio's songfestival</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="page-glow" aria-hidden="true"></div>
+    <div class="app-shell">
+      <section class="cover-banner" aria-label="Ted en Tio's Eurovision Song Contest party"></section>
+
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Eurovision night 2026</p>
+          <h1>Ted &amp; Tio's songfestival</h1>
+        </div>
+        <div class="top-actions">
+          <span id="syncStatus" class="sync-status">Lokaal</span>
+          <button id="adminBtn" type="button" class="ghost-btn" title="Ontgrendel beheer">Beheer</button>
+          <button id="myChoiceBtn" type="button" class="ghost-btn" title="Bekijk je opgeslagen stemmen">Mijn stemmen</button>
+          <button id="resetBtn" type="button" class="danger-btn" title="Wis alle opgeslagen gegevens">Reset</button>
+        </div>
+      </header>
+
+      <main>
+        <nav class="tabs" aria-label="App onderdelen">
+          <button class="tab active" type="button" data-tab="predictions">Voorspellingen</button>
+          <button class="tab" type="button" data-tab="results">Einduitslag</button>
+          <button class="tab" type="button" data-tab="scoreboard">Ranglijst</button>
+          <button class="tab" type="button" data-tab="countries">Landen</button>
+        </nav>
+
+        <section id="predictions" class="tab-panel active">
+          <div class="workspace-grid">
+            <form id="predictionForm" class="tool-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-kicker">Invoer</p>
+                  <h3 id="predictionFormTitle">Nieuwe voorspelling</h3>
+                </div>
+                <button id="cancelEditBtn" class="text-btn hidden" type="button">Annuleer</button>
+              </div>
+
+              <label>
+                Voor- en achternaam
+                <input id="playerName" type="text" maxlength="60" autocomplete="off" placeholder="Bijv. Samira Jansen" required>
+              </label>
+
+              <div class="round-buttons" aria-label="Stemrondes">
+                <button class="round-btn active" type="button" data-prediction-phase="semi1">Eerste halve finale</button>
+                <button class="round-btn" type="button" data-prediction-phase="semi2">Tweede halve finale</button>
+                <button class="round-btn" type="button" data-prediction-phase="final">Finale</button>
+              </div>
+
+              <section class="phase-panel active" data-prediction-panel="semi1">
+                <div class="semi-heading">
+                  <h4>Eerste halve finale</h4>
+                  <span id="semi1PredictionCount" class="capacity">0 / 10</span>
+                </div>
+                <div id="semi1Predictions" class="check-grid"></div>
+                <button class="primary-btn phase-save-btn" type="submit" data-save-phase="semi1">Eerste halve finale opslaan</button>
+              </section>
+
+              <section class="phase-panel" data-prediction-panel="semi2">
+                <div class="semi-heading">
+                  <h4>Tweede halve finale</h4>
+                  <span id="semi2PredictionCount" class="capacity">0 / 10</span>
+                </div>
+                <div id="semi2Predictions" class="check-grid"></div>
+                <button class="primary-btn phase-save-btn" type="submit" data-save-phase="semi2">Tweede halve finale opslaan</button>
+              </section>
+
+              <section class="phase-panel" data-prediction-panel="final">
+                <div class="semi-heading">
+                  <h4>Finale</h4>
+                  <span class="capacity">top 5 + laatste</span>
+                </div>
+                <div class="prediction-grid" id="predictionSelects"></div>
+                <button class="primary-btn phase-save-btn" type="submit" data-save-phase="final">Finale opslaan</button>
+              </section>
+              <p id="predictionMessage" class="form-message" role="status"></p>
+            </form>
+
+            <div class="list-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-kicker">Overzicht</p>
+                  <h3>Alle deelnemers</h3>
+                </div>
+                <span class="capacity" id="capacityLabel">0 / 100</span>
+              </div>
+              <div id="participantList" class="participant-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="hero-panel">
+          <div class="stats-strip" aria-label="Poule statistieken">
+            <div>
+              <span id="playerCount">0</span>
+              <small>deelnemers</small>
+            </div>
+            <div>
+              <span id="completeCount">0</span>
+              <small>volledige voorspellingen</small>
+            </div>
+            <div>
+              <span id="winnerCount">0</span>
+              <small>koplopers</small>
+            </div>
+          </div>
+        </section>
+
+        <section id="results" class="tab-panel">
+          <form id="resultForm" class="tool-panel full-width">
+            <div class="panel-heading">
+              <div>
+                <p class="section-kicker">Na de finale</p>
+                <h3>Echte einduitslag</h3>
+              </div>
+              <button id="clearResultsBtn" type="button" class="ghost-btn">Uitslag wissen</button>
+            </div>
+            <div id="votingControls" class="admin-locks"></div>
+            <p class="hint">Vul de daadwerkelijke uitslag per ronde apart in. Zodra een ronde is ingevuld, ziet iedereen direct de punten voor die ronde. Bij de finale telt de ranglijst ook de halve-finalepunten mee.</p>
+            <div class="round-buttons" aria-label="Uitslagrondes">
+              <button class="round-btn active" type="button" data-result-phase="semi1">Eerste halve finale</button>
+              <button class="round-btn" type="button" data-result-phase="semi2">Tweede halve finale</button>
+              <button class="round-btn" type="button" data-result-phase="final">Finale</button>
+            </div>
+            <section class="phase-panel active" data-result-panel="semi1">
+              <div id="semi1ResultRows" class="semi-results"></div>
+              <button class="primary-btn result-save-btn" type="submit" data-result-save-phase="semi1">Eerste halve finale uitslag opslaan</button>
+            </section>
+            <section class="phase-panel" data-result-panel="semi2">
+              <div id="semi2ResultRows" class="semi-results"></div>
+              <button class="primary-btn result-save-btn" type="submit" data-result-save-phase="semi2">Tweede halve finale uitslag opslaan</button>
+            </section>
+            <section class="phase-panel" data-result-panel="final">
+              <div id="resultRows" class="result-rows"></div>
+              <button class="primary-btn result-save-btn" type="submit" data-result-save-phase="final">Finale uitslag opslaan</button>
+            </section>
+            <p id="resultMessage" class="form-message" role="status"></p>
+          </form>
+        </section>
+
+        <section id="scoreboard" class="tab-panel">
+          <div class="tool-panel full-width">
+            <div class="panel-heading">
+              <div>
+                <p class="section-kicker">Score</p>
+                <h3>Ranglijst</h3>
+              </div>
+              <div class="score-actions">
+                <button id="topPicksBtn" type="button" class="ghost-btn">Vrij na de uitslag</button>
+                <button id="printBtn" type="button" class="ghost-btn">Print</button>
+              </div>
+            </div>
+            <div id="scoreSummary" class="score-summary"></div>
+            <div id="scoreboardList" class="scoreboard-list"></div>
+          </div>
+        </section>
+
+        <section id="countries" class="tab-panel">
+          <div class="workspace-grid">
+            <form id="countryForm" class="tool-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-kicker">Beheer</p>
+                  <h3>Landen aanpassen</h3>
+                </div>
+              </div>
+              <label>
+                Land
+                <input id="countryName" type="text" maxlength="80" placeholder="Landnaam">
+              </label>
+              <label>
+                Artiest en liedje
+                <input id="countryEntry" type="text" maxlength="120" placeholder="Artiest - Liedje">
+              </label>
+              <label>
+                Videoclip link
+                <input id="countryVideoUrl" type="url" maxlength="300" placeholder="https://youtube.com/...">
+              </label>
+              <button class="primary-btn" type="submit">Land toevoegen</button>
+              <button id="restoreCountriesBtn" type="button" class="ghost-btn wide">Standaardlijst terugzetten</button>
+              <p class="hint">Verwijder een land alleen als het nog niet in voorspellingen of uitslagen wordt gebruikt.</p>
+            </form>
+            <div class="list-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-kicker">2026</p>
+                  <h3>Deelnemende landen</h3>
+                </div>
+                <span id="countryCount" class="capacity">0 landen</span>
+              </div>
+              <div id="countryList" class="country-list"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="selectTemplate">
+      <label>
+        <span></span>
+        <select required></select>
+      </label>
+    </template>
+
+    <div id="choiceModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="choiceTitle">
+      <div class="modal-card">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">Jouw voorspelling</p>
+            <h3 id="choiceTitle">Mijn stemmen</h3>
+          </div>
+          <button id="closeChoiceBtn" class="icon-btn" type="button" title="Sluiten">X</button>
+        </div>
+        <div id="choiceContent" class="choice-content"></div>
+      </div>
+    </div>
+
+    <div id="topPicksModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="topPicksTitle">
+      <div class="modal-card">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">Iedereens favoriet</p>
+            <h3 id="topPicksTitle">Nummer 1 keuzes</h3>
+          </div>
+          <button id="closeTopPicksBtn" class="icon-btn" type="button" title="Sluiten">X</button>
+        </div>
+        <div id="topPicksContent" class="choice-content"></div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
