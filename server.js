@@ -9,7 +9,6 @@ const HOST = process.env.HOST || "0.0.0.0";
 const ADMIN_PIN = String(process.env.ADMIN_PIN || "1234");
 const DATA_FILE = path.join(__dirname, "data.json");
 const PUBLIC_DIR = __dirname;
-const MAX_PLAYERS = 100;
 const DATABASE_URL = process.env.DATABASE_URL || "";
 const USE_FIRESTORE = process.env.STORAGE_BACKEND === "firestore" || Boolean(process.env.K_SERVICE);
 const USE_POSTGRES = Boolean(DATABASE_URL) && !USE_FIRESTORE;
@@ -420,7 +419,6 @@ async function handleApi(req, res, url) {
     const body = await parseBody(req);
     const next = await updateState((state) => {
       const payload = validatePrediction(state, body);
-      if (state.participants.length >= MAX_PLAYERS) throw new Error("Er kunnen maximaal 100 deelnemers meedoen.");
       state.participants.push({ id: crypto.randomUUID(), ...payload, createdAt: new Date().toISOString() });
       return state;
     });
@@ -433,7 +431,6 @@ async function handleApi(req, res, url) {
       const payload = validatePhasePrediction(state, body);
       const index = state.participants.findIndex((player) => player.name.toLowerCase() === payload.name.toLowerCase());
       if (index === -1) {
-        if (state.participants.length >= MAX_PLAYERS) throw new Error("Er kunnen maximaal 100 deelnemers meedoen.");
         state.participants.push(mergePhasePrediction({
           id: crypto.randomUUID(),
           name: payload.name,
@@ -557,7 +554,7 @@ async function handleApi(req, res, url) {
     if (!Array.isArray(imported.countries) || !Array.isArray(imported.participants)) throw new Error("Ongeldig importbestand.");
     const next = {
       countries: imported.countries,
-      participants: imported.participants.slice(0, MAX_PLAYERS).map(normalizePlayer),
+      participants: imported.participants.map(normalizePlayer),
       actualResult: Array.isArray(imported.actualResult) ? imported.actualResult : Array(imported.countries.length).fill(""),
       semiQualifiers: normalizeSemiQualifiers(imported.semiQualifiers),
       votingClosed: normalizeVotingClosed(imported.votingClosed)

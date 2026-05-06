@@ -1,4 +1,3 @@
-const MAX_PLAYERS = 100;
 const STORAGE_KEY = "ted-tio-songfestival-speelkopie-2026";
 const ADMIN_KEY = "songfestival-admin-pin";
 const MY_CHOICE_KEY = "songfestival-my-choice-name";
@@ -513,7 +512,7 @@ function renderVotingControls() {
 }
 
 function renderParticipants() {
-  el.capacityLabel.textContent = `${state.participants.length} / ${MAX_PLAYERS}`;
+  el.capacityLabel.textContent = `${state.participants.length} deelnemers`;
   if (!state.participants.length) {
     el.participantList.innerHTML = `<div class="empty-state">Nog geen voorspellingen opgeslagen.</div>`;
     return;
@@ -807,7 +806,6 @@ function mergeLocalPhaseVote(next) {
   }
 
   if (index === -1) {
-    if (state.participants.length >= MAX_PLAYERS) throw new Error("Er kunnen maximaal 100 deelnemers meedoen.");
     state.participants.push(base);
   } else {
     state.participants[index] = base;
