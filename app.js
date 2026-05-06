@@ -328,7 +328,7 @@ function renderPredictionSelects(values = {}) {
   el.predictionSelects.innerHTML = `${finalistHint}${labels.map(([key, label]) => `
     <label>
       ${label}
-      <select name="${key}" required>${selectOptions(values[key] || "")}</select>
+      <select name="${key}">${selectOptions(values[key] || "")}</select>
     </label>
   `).join("")}`;
 
@@ -823,6 +823,14 @@ function showMessage(target, message, type = "success") {
   }, 3200);
 }
 
+function flashButton(button, className = "is-tapped", duration = 520) {
+  if (!button) return;
+  button.classList.remove("is-tapped", "is-saved");
+  void button.offsetWidth;
+  button.classList.add(className);
+  window.setTimeout(() => button.classList.remove(className), duration);
+}
+
 function phaseLabel(phase) {
   if (phase === "semi1") return "de eerste halve finale";
   if (phase === "semi2") return "de tweede halve finale";
@@ -1228,6 +1236,7 @@ el.topPicksModal.addEventListener("click", (event) => {
 
 el.predictionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  flashButton(event.submitter, "is-tapped", 420);
   const phase = event.submitter?.dataset.savePhase || activePredictionPhase;
   if (phase === "final" && !hasCompleteFinalistList()) {
     showMessage(el.predictionMessage, "De finalelijst is nog niet compleet. Vul eerst de doorgangers van beide halve finales in.", "error");
@@ -1267,6 +1276,7 @@ el.predictionForm.addEventListener("submit", async (event) => {
     } else {
       showVoteThanks(savedName, phase);
     }
+    flashButton(event.submitter, "is-saved", 900);
   } catch (error) {
     showMessage(el.predictionMessage, error.message, "error");
   }
@@ -1317,6 +1327,7 @@ el.participantList.addEventListener("click", async (event) => {
 
 el.resultForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  flashButton(event.submitter, "is-tapped", 420);
   const phase = event.submitter?.dataset.resultSavePhase || activeResultPhase;
   if (phase === "final" && !hasCompleteFinalistList()) {
     showMessage(el.resultMessage, "De finalelijst is nog niet compleet. Vul eerst de doorgangers van beide halve finales in.", "error");
@@ -1348,6 +1359,7 @@ el.resultForm.addEventListener("submit", async (event) => {
       }
     });
     showMessage(el.resultMessage, `${phaseLabel(phase)} opgeslagen.`);
+    flashButton(event.submitter, "is-saved", 900);
   } catch (error) {
     showMessage(el.resultMessage, error.message, "error");
   }
