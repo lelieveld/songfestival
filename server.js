@@ -67,6 +67,7 @@ function emptyState() {
     participants: [],
     actualResult: Array(defaultCountries.length).fill(""),
     semiQualifiers: { semi1: [], semi2: [] },
+    finalRunningOrder: [],
     votingClosed: { semi1: false, semi2: false, final: false }
   };
 }
@@ -114,6 +115,7 @@ function normalizeState(state) {
       participants: state.participants.map(normalizePlayer),
       actualResult: Array.isArray(state.actualResult) ? state.actualResult : Array(state.countries.length).fill(""),
       semiQualifiers: normalizeSemiQualifiers(state.semiQualifiers),
+      finalRunningOrder: Array.isArray(state.finalRunningOrder) ? state.finalRunningOrder : [],
       votingClosed: normalizeVotingClosed(state.votingClosed)
     };
   }
@@ -477,16 +479,21 @@ async function handleApi(req, res, url) {
     const next = await updateState((state) => {
       const actualResult = Array.isArray(body.actualResult) ? body.actualResult : [];
       const semiQualifiers = normalizeSemiQualifiers(body.semiQualifiers);
+      const finalRunningOrder = Array.isArray(body.finalRunningOrder) ? body.finalRunningOrder : state.finalRunningOrder || [];
       const filled = actualResult.filter(Boolean);
+      const runningFilled = finalRunningOrder.filter(Boolean);
       const countryNames = getFinalCountryNames(state);
       if (filled.some((name) => !countryNames.includes(name))) throw new Error("De uitslag bevat een onbekend land.");
       if (filled.length && !hasCompleteFinalistList(state)) throw new Error("De finalelijst is nog niet compleet.");
       if (new Set(filled).size !== filled.length) throw new Error("Een land mag maar een keer in de einduitslag staan.");
+      if (runningFilled.some((name) => !countryNames.includes(name))) throw new Error("De volgorde van optreden bevat een onbekend land.");
+      if (new Set(runningFilled).size !== runningFilled.length) throw new Error("Een land mag maar een keer in de volgorde van optreden staan.");
       if (![0, 10].includes(semiQualifiers.semi1.length) || ![0, 10].includes(semiQualifiers.semi2.length)) throw new Error("Kies precies 10 doorgangers per halve finale.");
       if (new Set(semiQualifiers.semi1).size !== semiQualifiers.semi1.length || new Set(semiQualifiers.semi2).size !== semiQualifiers.semi2.length) throw new Error("Een land mag maar een keer per halve finale worden gekozen.");
       if (semiQualifiers.semi1.some((pick) => !semiFinals.semi1.includes(pick)) || semiQualifiers.semi2.some((pick) => !semiFinals.semi2.includes(pick))) throw new Error("Een halve-finale uitslag bevat een ongeldig land.");
       state.actualResult = actualResult.slice(0, Math.max(state.countries.length, 6));
       state.semiQualifiers = semiQualifiers;
+      state.finalRunningOrder = finalRunningOrder.slice(0, countryNames.length);
       return state;
     });
     return sendJson(res, 200, next);
@@ -515,6 +522,7 @@ async function handleApi(req, res, url) {
       state.countries.push({ name, entry, videoUrl });
       state.actualResult = Array(state.countries.length).fill("");
       state.semiQualifiers = { semi1: [], semi2: [] };
+      state.finalRunningOrder = [];
       state.votingClosed = normalizeVotingClosed(state.votingClosed);
       return state;
     });
@@ -530,6 +538,7 @@ async function handleApi(req, res, url) {
       state.countries = state.countries.filter((country) => country.name !== countryName);
       state.actualResult = Array(state.countries.length).fill("");
       state.semiQualifiers = { semi1: [], semi2: [] };
+      state.finalRunningOrder = [];
       state.votingClosed = normalizeVotingClosed(state.votingClosed);
       return state;
     });
@@ -542,6 +551,7 @@ async function handleApi(req, res, url) {
       state.countries = defaultCountries;
       state.actualResult = Array(defaultCountries.length).fill("");
       state.semiQualifiers = { semi1: [], semi2: [] };
+      state.finalRunningOrder = [];
       state.votingClosed = normalizeVotingClosed(state.votingClosed);
       return state;
     });
@@ -557,6 +567,7 @@ async function handleApi(req, res, url) {
       participants: imported.participants.map(normalizePlayer),
       actualResult: Array.isArray(imported.actualResult) ? imported.actualResult : Array(imported.countries.length).fill(""),
       semiQualifiers: normalizeSemiQualifiers(imported.semiQualifiers),
+      finalRunningOrder: Array.isArray(imported.finalRunningOrder) ? imported.finalRunningOrder : [],
       votingClosed: normalizeVotingClosed(imported.votingClosed)
     };
     await writeState(next);

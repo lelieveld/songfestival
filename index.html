@@ -123,7 +123,7 @@
               <button id="clearResultsBtn" type="button" class="ghost-btn">Uitslag wissen</button>
             </div>
             <div id="votingControls" class="admin-locks"></div>
-            <p class="hint">Vul de daadwerkelijke uitslag per ronde apart in. Zodra een ronde is ingevuld, ziet iedereen direct de punten voor die ronde. Bij de finale telt de ranglijst ook de halve-finalepunten mee.</p>
+            <p class="hint">Hier komt de officiele einduitslag te staan zodra die bekend is.</p>
             <div class="round-buttons" aria-label="Uitslagrondes">
               <button class="round-btn active" type="button" data-result-phase="semi1">Eerste halve finale</button>
               <button class="round-btn" type="button" data-result-phase="semi2">Tweede halve finale</button>
@@ -138,6 +138,7 @@
               <button class="primary-btn result-save-btn" type="submit" data-result-save-phase="semi2">Tweede halve finale uitslag opslaan</button>
             </section>
             <section class="phase-panel" data-result-panel="final">
+              <div id="finalRunningOrderRows" class="result-rows"></div>
               <div id="resultRows" class="result-rows"></div>
               <button class="primary-btn result-save-btn" type="submit" data-result-save-phase="final">Finale uitslag opslaan</button>
             </section>
