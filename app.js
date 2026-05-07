@@ -138,6 +138,7 @@ const el = {
   myChoiceBtn: document.querySelector("#myChoiceBtn"),
   resetBtn: document.querySelector("#resetBtn"),
   choiceModal: document.querySelector("#choiceModal"),
+  choiceTitle: document.querySelector("#choiceTitle"),
   choiceContent: document.querySelector("#choiceContent"),
   closeChoiceBtn: document.querySelector("#closeChoiceBtn"),
   topPicksModal: document.querySelector("#topPicksModal"),
@@ -613,26 +614,35 @@ function renderParticipants() {
     return;
   }
 
+  const canManageParticipants = !API_MODE || isAdmin();
+  const canViewClosedPredictions = closedPredictionPhases().length > 0;
   el.participantList.innerHTML = state.participants.map((player) => `
     <article class="participant-card">
       <header>
         <h4>${escapeHtml(player.name)}</h4>
-        <div class="participant-actions ${API_MODE && !isAdmin() ? "hidden" : ""}">
-          <button class="icon-btn" type="button" data-edit="${player.id}" title="Bewerk">B</button>
-          <button class="icon-btn" type="button" data-delete="${player.id}" title="Verwijder">X</button>
-        </div>
+        ${canManageParticipants ? `
+          <div class="participant-actions">
+            <button class="icon-btn" type="button" data-edit="${player.id}" title="Bewerk">B</button>
+            <button class="icon-btn" type="button" data-delete="${player.id}" title="Verwijder">X</button>
+          </div>
+        ` : ""}
       </header>
       <div class="round-status-list">
         ${participantRoundStatus("HF1", player.prediction.semi1.length === 10)}
         ${participantRoundStatus("HF2", player.prediction.semi2.length === 10)}
         ${participantRoundStatus("Finale", player.prediction.top5.length === 5 && player.prediction.top5.every(Boolean) && Boolean(player.prediction.last))}
       </div>
+      ${canViewClosedPredictions ? `<button class="ghost-btn participant-view-btn" type="button" data-view-prediction="${player.id}">Bekijk voorspelling</button>` : ""}
     </article>
   `).join("");
 }
 
 function participantRoundStatus(label, done) {
   return `<span class="round-status ${done ? "done" : ""}">${escapeHtml(label)}: ${done ? "ingevuld" : "open"}</span>`;
+}
+
+function closedPredictionPhases() {
+  return ["semi1", "semi2", "final"].filter((phase) => state.votingClosed?.[phase]);
 }
 
 function calculateScores() {
@@ -949,6 +959,7 @@ function findMyChoice(name = localStorage.getItem(MY_CHOICE_KEY)) {
 }
 
 function renderChoiceModal(searchName = localStorage.getItem(MY_CHOICE_KEY) || "") {
+  el.choiceTitle.textContent = "Mijn stemmen";
   const player = findMyChoice(searchName);
   const searchForm = `
     <form id="choiceLookupForm" class="choice-lookup">
@@ -1002,6 +1013,43 @@ function renderChoiceModal(searchName = localStorage.getItem(MY_CHOICE_KEY) || "
       <li class="choice-last"><span>L</span><strong>${escapeHtml(countryLabel(player.prediction.last))}</strong>${videoLinkForCountryName(player.prediction.last)}</li>
     </ol>
   `;
+}
+
+function predictionRowsForPhase(player, phase) {
+  if (phase === "semi1" || phase === "semi2") {
+    return player.prediction[phase].map((country, index) => `
+      <li><span>${index + 1}</span><strong>${escapeHtml(countryLabel(country))}</strong>${videoLinkForCountryName(country)}</li>
+    `).join("") || `<li><span>-</span><strong>Nog niet ingevuld</strong></li>`;
+  }
+
+  const finalRows = player.prediction.top5.map((country, index) => `
+    <li><span>${index + 1}</span><strong>${escapeHtml(countryLabel(country))}</strong>${videoLinkForCountryName(country)}</li>
+  `).join("");
+  const lastRow = player.prediction.last
+    ? `<li class="choice-last"><span>L</span><strong>${escapeHtml(countryLabel(player.prediction.last))}</strong>${videoLinkForCountryName(player.prediction.last)}</li>`
+    : "";
+  return finalRows || lastRow ? `${finalRows}${lastRow}` : `<li><span>-</span><strong>Nog niet ingevuld</strong></li>`;
+}
+
+function renderPublicPredictionModal(player) {
+  const phases = closedPredictionPhases();
+  el.choiceTitle.textContent = "Voorspelling";
+  el.choiceContent.innerHTML = `
+    <p class="choice-name">${escapeHtml(player.name)}</p>
+    <ol class="choice-list">
+      ${phases.map((phase) => `
+        <li class="choice-section"><strong>${escapeHtml(phaseLabel(phase))}</strong></li>
+        ${predictionRowsForPhase(player, phase)}
+      `).join("")}
+    </ol>
+  `;
+}
+
+function openPublicPredictionModal(playerId) {
+  const player = state.participants.find((item) => item.id === playerId);
+  if (!player || !closedPredictionPhases().length) return;
+  renderPublicPredictionModal(player);
+  el.choiceModal.classList.remove("hidden");
 }
 
 function openChoiceModal() {
@@ -1400,6 +1448,15 @@ el.cancelEditBtn.addEventListener("click", resetPredictionForm);
 el.participantList.addEventListener("click", async (event) => {
   const editId = event.target.dataset.edit;
   const deleteId = event.target.dataset.delete;
+  const viewId = event.target.dataset.viewPrediction;
+  if (viewId) {
+    openPublicPredictionModal(viewId);
+    return;
+  }
+  if ((editId || deleteId) && API_MODE && !isAdmin()) {
+    showMessage(el.predictionMessage, "Alleen beheer kan deelnemers bewerken of verwijderen.", "error");
+    return;
+  }
 
   if (editId) {
     const player = state.participants.find((item) => item.id === editId);
