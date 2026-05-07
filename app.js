@@ -85,6 +85,7 @@ let state = {
   participants: [],
   actualResult: Array(defaultCountries.length).fill(""),
   semiQualifiers: { semi1: [], semi2: [] },
+  finalRunningOrder: [],
   votingClosed: { semi1: false, semi2: false, final: false }
 };
 let editingId = null;
@@ -116,6 +117,7 @@ const el = {
   votingControls: document.querySelector("#votingControls"),
   semi1ResultRows: document.querySelector("#semi1ResultRows"),
   semi2ResultRows: document.querySelector("#semi2ResultRows"),
+  finalRunningOrderRows: document.querySelector("#finalRunningOrderRows"),
   resultRows: document.querySelector("#resultRows"),
   resultMessage: document.querySelector("#resultMessage"),
   clearResultsBtn: document.querySelector("#clearResultsBtn"),
@@ -185,6 +187,7 @@ function normalizeState(nextState) {
     participants: Array.isArray(nextState.participants) ? nextState.participants.map(normalizePlayer) : [],
     actualResult: Array.isArray(nextState.actualResult) ? nextState.actualResult : Array(defaultCountries.length).fill(""),
     semiQualifiers: normalizeSemiQualifiers(nextState.semiQualifiers),
+    finalRunningOrder: Array.isArray(nextState.finalRunningOrder) ? nextState.finalRunningOrder : [],
     votingClosed: normalizeVotingClosed(nextState.votingClosed)
   };
 }
@@ -198,6 +201,7 @@ function loadLocalState() {
         participants: saved.participants.map(normalizePlayer),
         actualResult: Array.isArray(saved.actualResult) ? saved.actualResult : Array(saved.countries.length).fill(""),
         semiQualifiers: normalizeSemiQualifiers(saved.semiQualifiers),
+        finalRunningOrder: Array.isArray(saved.finalRunningOrder) ? saved.finalRunningOrder : [],
         votingClosed: normalizeVotingClosed(saved.votingClosed)
       });
     }
@@ -209,6 +213,7 @@ function loadLocalState() {
     participants: [],
     actualResult: Array(defaultCountries.length).fill(""),
     semiQualifiers: { semi1: [], semi2: [] },
+    finalRunningOrder: [],
     votingClosed: { semi1: false, semi2: false, final: false }
   };
 }
@@ -286,11 +291,28 @@ function selectOptions(selected = "") {
   const options = ['<option value="" class="placeholder-option">Kies een land</option>'];
   getFinalCountries().forEach((country) => {
     const value = escapeHtml(country.name);
-    const entry = country.entry ? ` (${country.entry})` : "";
-    const label = `${escapeHtml(country.name)}${escapeHtml(entry)}`;
+    const label = escapeHtml(country.name);
     options.push(`<option class="country-option" value="${value}" ${country.name === selected ? "selected" : ""}>${label}</option>`);
   });
   return options.join("");
+}
+
+function updateSelectedEntryHint(select) {
+  const hint = select.nextElementSibling?.classList.contains("selected-entry-hint")
+    ? select.nextElementSibling
+    : null;
+  if (!hint) return;
+
+  const country = state.countries.find((item) => item.name === select.value);
+  hint.textContent = country?.entry ? `(${country.entry})` : "";
+  hint.classList.toggle("hidden", !country?.entry);
+}
+
+function enhanceFinalSelect(select) {
+  if (!select.nextElementSibling?.classList.contains("selected-entry-hint")) {
+    select.insertAdjacentHTML("afterend", '<div class="selected-entry-hint hidden"></div>');
+  }
+  updateSelectedEntryHint(select);
 }
 
 function getFinalCountryNames() {
@@ -303,7 +325,19 @@ function getFinalCountryNames() {
 
 function getFinalCountries() {
   const finalistNames = getFinalCountryNames();
-  return state.countries.filter((country) => finalistNames.includes(country.name));
+  const countries = state.countries.filter((country) => finalistNames.includes(country.name));
+  const runningOrder = Array.isArray(state.finalRunningOrder) ? state.finalRunningOrder.filter((name) => finalistNames.includes(name)) : [];
+  if (runningOrder.length) {
+    return countries.slice().sort((a, b) => {
+      const aIndex = runningOrder.indexOf(a.name);
+      const bIndex = runningOrder.indexOf(b.name);
+      if (aIndex === -1 && bIndex === -1) return finalistNames.indexOf(a.name) - finalistNames.indexOf(b.name);
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+  }
+  return countries;
 }
 
 function hasCompleteFinalistList() {
@@ -333,6 +367,8 @@ function renderPredictionSelects(values = {}) {
 
   el.predictionSelects.querySelectorAll("select").forEach((select) => {
     select.addEventListener("change", validatePredictionSelects);
+    select.addEventListener("change", () => updateSelectedEntryHint(select));
+    enhanceFinalSelect(select);
   });
   validatePredictionSelects();
 }
@@ -386,8 +422,39 @@ function renderResultRows() {
   el.resultRows.querySelectorAll("select").forEach((select) => {
     select.disabled = API_MODE && !isAdmin();
     select.addEventListener("change", validateResultSelects);
+    select.addEventListener("change", () => updateSelectedEntryHint(select));
+    enhanceFinalSelect(select);
   });
   validateResultSelects();
+}
+
+function renderFinalRunningOrderRows() {
+  const finalCountries = getFinalCountries();
+  if (!hasCompleteFinalistList()) {
+    el.finalRunningOrderRows.innerHTML = "";
+    return;
+  }
+
+  const rows = finalCountries.map((country, index) => {
+    const storedValue = state.finalRunningOrder?.[index] || "";
+    return `
+      <label>
+        ${index + 1}e startpositie
+        <select name="running-${index}">
+          ${selectOptions(storedValue || "")}
+        </select>
+      </label>
+    `;
+  });
+
+  el.finalRunningOrderRows.innerHTML = `<p class="hint">Vul hier de volgorde van optreden in zodra die bekend is. De finalelijst wordt daarna in deze volgorde getoond.</p>${rows.join("")}`;
+  el.finalRunningOrderRows.querySelectorAll("select").forEach((select) => {
+    select.disabled = API_MODE && !isAdmin();
+    select.addEventListener("change", validateFinalRunningOrderSelects);
+    select.addEventListener("change", () => updateSelectedEntryHint(select));
+    enhanceFinalSelect(select);
+  });
+  validateFinalRunningOrderSelects();
 }
 
 function renderSemiResultRows() {
@@ -464,6 +531,14 @@ function validateSemiPredictionChecks() {
 
 function validateResultSelects() {
   const selects = [...el.resultRows.querySelectorAll("select")];
+  const values = selects.map((select) => select.value).filter(Boolean);
+  const duplicates = values.filter((value, index) => values.indexOf(value) !== index);
+  selects.forEach((select) => select.classList.toggle("invalid", Boolean(select.value && duplicates.includes(select.value))));
+  return duplicates.length === 0;
+}
+
+function validateFinalRunningOrderSelects() {
+  const selects = [...el.finalRunningOrderRows.querySelectorAll("select")];
   const values = selects.map((select) => select.value).filter(Boolean);
   const duplicates = values.filter((value, index) => values.indexOf(value) !== index);
   selects.forEach((select) => select.classList.toggle("invalid", Boolean(select.value && duplicates.includes(select.value))));
@@ -746,6 +821,7 @@ function renderPermissions() {
 function renderAll() {
   renderPredictionSelects();
   renderSemiPredictions();
+  renderFinalRunningOrderRows();
   renderResultRows();
   renderSemiResultRows();
   renderParticipants();
@@ -871,16 +947,29 @@ function renderChoiceModal(searchName = localStorage.getItem(MY_CHOICE_KEY) || "
   }
 
   localStorage.setItem(MY_CHOICE_KEY, player.name);
+  const semi1Points = state.semiQualifiers.semi1.length === 10 ? player.prediction.semi1.filter((country) => state.semiQualifiers.semi1.includes(country)).length : null;
+  const semi2Points = state.semiQualifiers.semi2.length === 10 ? player.prediction.semi2.filter((country) => state.semiQualifiers.semi2.includes(country)).length : null;
+  const choiceScoreSummary = semi1Points === null && semi2Points === null
+    ? ""
+    : `<div class="choice-score-summary">
+        ${semi1Points === null ? "" : `<span>Halve finale 1: <strong>${semi1Points} / 10</strong></span>`}
+        ${semi2Points === null ? "" : `<span>Halve finale 2: <strong>${semi2Points} / 10</strong></span>`}
+      </div>`;
   el.choiceContent.innerHTML = `
     ${searchForm}
     <p class="choice-name">${escapeHtml(player.name)}</p>
-    <button class="primary-btn share-choice-btn" type="button" data-share-choice="${escapeHtml(player.name)}">Deel als afbeelding</button>
+    ${choiceScoreSummary}
+    <div class="share-choice-grid">
+      <button class="primary-btn share-choice-btn" type="button" data-share-choice="${escapeHtml(player.name)}" data-share-phase="semi1">Deel halve finale 1</button>
+      <button class="primary-btn share-choice-btn" type="button" data-share-choice="${escapeHtml(player.name)}" data-share-phase="semi2">Deel halve finale 2</button>
+      <button class="primary-btn share-choice-btn" type="button" data-share-choice="${escapeHtml(player.name)}" data-share-phase="final">Deel finale</button>
+    </div>
     <ol class="choice-list">
-      <li class="choice-section"><strong>Eerste halve finale: ${player.prediction.semi1.length}/10</strong></li>
+      <li class="choice-section"><strong>Eerste halve finale: ${player.prediction.semi1.length}/10${semi1Points === null ? "" : ` - ${semi1Points} punten`}</strong></li>
       ${player.prediction.semi1.map((country) => `
         <li><span>1</span><strong>${escapeHtml(countryLabel(country))}</strong>${videoLinkForCountryName(country)}</li>
       `).join("")}
-      <li class="choice-section"><strong>Tweede halve finale: ${player.prediction.semi2.length}/10</strong></li>
+      <li class="choice-section"><strong>Tweede halve finale: ${player.prediction.semi2.length}/10${semi2Points === null ? "" : ` - ${semi2Points} punten`}</strong></li>
       ${player.prediction.semi2.map((country) => `
         <li><span>2</span><strong>${escapeHtml(countryLabel(country))}</strong>${videoLinkForCountryName(country)}</li>
       `).join("")}
@@ -902,13 +991,14 @@ function closeChoiceModal() {
   el.choiceModal.classList.add("hidden");
 }
 
-function choiceRowsForImage(player) {
+function choiceRowsForImage(player, phase) {
+  if (phase === "semi1") {
+    return player.prediction.semi1.map((country, index) => ({ badge: String(index + 1), text: countryLabel(country) }));
+  }
+  if (phase === "semi2") {
+    return player.prediction.semi2.map((country, index) => ({ badge: String(index + 1), text: countryLabel(country) }));
+  }
   return [
-    { type: "section", text: `Eerste halve finale (${player.prediction.semi1.length}/10)` },
-    ...player.prediction.semi1.map((country) => ({ badge: "1", text: countryLabel(country) })),
-    { type: "section", text: `Tweede halve finale (${player.prediction.semi2.length}/10)` },
-    ...player.prediction.semi2.map((country) => ({ badge: "2", text: countryLabel(country) })),
-    { type: "section", text: "Finale" },
     ...player.prediction.top5.map((country, index) => ({ badge: String(index + 1), text: countryLabel(country) })),
     ...(player.prediction.last ? [{ badge: "L", text: countryLabel(player.prediction.last) }] : [])
   ];
@@ -953,11 +1043,16 @@ function canvasToBlob(canvas) {
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
 }
 
-async function shareChoiceImage(playerName) {
+function shareTitleForPhase(phase) {
+  if (phase === "semi1" || phase === "semi2") return "Mijn top 10 van deze halve finale";
+  return "Mijn finale voorspelling";
+}
+
+async function shareChoiceImage(playerName, phase = "semi1") {
   const player = findMyChoice(playerName);
   if (!player) return;
 
-  const rows = choiceRowsForImage(player);
+  const rows = choiceRowsForImage(player, phase);
   const width = 1080;
   const padding = 64;
   const rowGap = 16;
@@ -992,9 +1087,6 @@ async function shareChoiceImage(playerName) {
   ctx.fillStyle = "#fff06d";
   ctx.font = "800 26px Segoe UI, Arial, sans-serif";
   ctx.fillText("Eurovision night 2026", padding, 88);
-  ctx.fillStyle = "#fffaff";
-  ctx.font = "900 58px Segoe UI, Arial, sans-serif";
-  ctx.fillText("Ted & Tio's songfestival", padding, 160);
 
   let y = coverHeight + 70;
   ctx.fillStyle = "#6fffb2";
@@ -1003,7 +1095,7 @@ async function shareChoiceImage(playerName) {
   y += 54;
   ctx.fillStyle = "#d4d2ff";
   ctx.font = "700 28px Segoe UI, Arial, sans-serif";
-  ctx.fillText("Mijn stemmen", padding, y);
+  ctx.fillText(shareTitleForPhase(phase), padding, y);
   y += 54;
 
   rows.forEach((row) => {
@@ -1042,17 +1134,17 @@ async function shareChoiceImage(playerName) {
 
   ctx.fillStyle = "#d4d2ff";
   ctx.font = "700 24px Segoe UI, Arial, sans-serif";
-  ctx.fillText("Gemaakt met Ted & Tio's songfestival", padding, height - 54);
+  ctx.fillText("Gemaakt met de Ted & Tio's Songfestival party app", padding, height - 54);
 
   const blob = await canvasToBlob(canvas);
-  const fileName = `ted-tio-stemmen-${player.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "deelnemer"}.png`;
+  const fileName = `ted-tio-${phase}-${player.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "deelnemer"}.png`;
   const file = new File([blob], fileName, { type: "image/png" });
 
   if (navigator.canShare?.({ files: [file] })) {
     await navigator.share({
       files: [file],
-      title: "Mijn Songfestival stemmen",
-      text: "Mijn Ted & Tio Songfestival stemmen"
+      title: shareTitleForPhase(phase),
+      text: shareTitleForPhase(phase)
     });
     return;
   }
@@ -1212,10 +1304,11 @@ el.choiceContent.addEventListener("submit", (event) => {
 el.choiceContent.addEventListener("click", async (event) => {
   const playerName = event.target.dataset.shareChoice;
   if (!playerName) return;
+  const phase = event.target.dataset.sharePhase || "semi1";
   event.target.disabled = true;
   event.target.textContent = "Afbeelding maken...";
   try {
-    await shareChoiceImage(playerName);
+    await shareChoiceImage(playerName, phase);
   } catch {
     alert("De afbeelding kon niet worden gemaakt.");
   } finally {
@@ -1335,6 +1428,10 @@ el.resultForm.addEventListener("submit", async (event) => {
     showMessage(el.resultMessage, "Een land mag maar een keer in de einduitslag staan.", "error");
     return;
   }
+  if (phase === "final" && !validateFinalRunningOrderSelects()) {
+    showMessage(el.resultMessage, "Een land mag maar een keer in de volgorde van optreden staan.", "error");
+    return;
+  }
   if ((phase === "semi1" || phase === "semi2") && !validateSemiGroup(phase === "semi1" ? el.semi1ResultRows.querySelector('[data-semi-result="semi1"]') : el.semi2ResultRows.querySelector('[data-semi-result="semi2"]'), document.querySelector(`#${phase}ResultCount`))) {
     showMessage(el.resultMessage, "Kies precies 10 doorgangers.", "error");
     return;
@@ -1343,6 +1440,9 @@ el.resultForm.addEventListener("submit", async (event) => {
   const actualResult = phase === "final"
     ? [...el.resultRows.querySelectorAll("select")].map((select) => select.value)
     : state.actualResult;
+  const finalRunningOrder = phase === "final"
+    ? [...el.finalRunningOrderRows.querySelectorAll("select")].map((select) => select.value)
+    : state.finalRunningOrder;
   const semiQualifiers = {
     semi1: phase === "semi1" ? checkedValues(el.semi1ResultRows.querySelector('[data-semi-result="semi1"]')) : state.semiQualifiers.semi1,
     semi2: phase === "semi2" ? checkedValues(el.semi2ResultRows.querySelector('[data-semi-result="semi2"]')) : state.semiQualifiers.semi2
@@ -1350,10 +1450,11 @@ el.resultForm.addEventListener("submit", async (event) => {
   try {
     await persistLocalOrRefresh(async () => {
       if (API_MODE) {
-        await api("/api/results", { method: "PUT", body: JSON.stringify({ actualResult, semiQualifiers }) });
+        await api("/api/results", { method: "PUT", body: JSON.stringify({ actualResult, semiQualifiers, finalRunningOrder }) });
       } else {
         state.actualResult = actualResult;
         state.semiQualifiers = semiQualifiers;
+        state.finalRunningOrder = finalRunningOrder;
       }
     });
     showMessage(el.resultMessage, `${phaseLabel(phase)} opgeslagen.`);
@@ -1368,10 +1469,11 @@ el.clearResultsBtn.addEventListener("click", async () => {
   try {
     await persistLocalOrRefresh(async () => {
       if (API_MODE) {
-        await api("/api/results", { method: "PUT", body: JSON.stringify({ actualResult: Array(state.countries.length).fill(""), semiQualifiers: { semi1: [], semi2: [] } }) });
+        await api("/api/results", { method: "PUT", body: JSON.stringify({ actualResult: Array(state.countries.length).fill(""), semiQualifiers: { semi1: [], semi2: [] }, finalRunningOrder: [] }) });
       } else {
         state.actualResult = Array(state.countries.length).fill("");
         state.semiQualifiers = { semi1: [], semi2: [] };
+        state.finalRunningOrder = [];
       }
     });
   } catch (error) {
@@ -1395,6 +1497,7 @@ el.countryForm.addEventListener("submit", async (event) => {
         state.countries.push({ name, entry, videoUrl });
         state.actualResult = Array(state.countries.length).fill("");
         state.semiQualifiers = { semi1: [], semi2: [] };
+        state.finalRunningOrder = [];
       }
     });
     el.countryForm.reset();
@@ -1421,6 +1524,7 @@ el.countryList.addEventListener("click", async (event) => {
         state.countries = state.countries.filter((country) => country.name !== countryName);
         state.actualResult = Array(state.countries.length).fill("");
         state.semiQualifiers = { semi1: [], semi2: [] };
+        state.finalRunningOrder = [];
       }
     });
   } catch (error) {
@@ -1438,6 +1542,7 @@ el.restoreCountriesBtn.addEventListener("click", async () => {
         state.countries = defaultCountries;
         state.actualResult = Array(defaultCountries.length).fill("");
         state.semiQualifiers = { semi1: [], semi2: [] };
+        state.finalRunningOrder = [];
       }
     });
   } catch (error) {

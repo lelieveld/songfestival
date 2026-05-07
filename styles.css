@@ -267,11 +267,50 @@ button:disabled {
 }
 
 .primary-btn {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   background: linear-gradient(90deg, var(--pink), var(--hot-pink) 44%, var(--cyan));
   color: #fff;
   border: 0;
   box-shadow: 0 16px 38px rgba(255, 20, 107, 0.28), 0 0 28px rgba(65, 231, 255, 0.12);
+}
+
+.primary-btn::after {
+  content: "";
+  position: absolute;
+  inset: -35% auto -35% -60%;
+  width: 42%;
+  transform: skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.primary-btn.is-tapped {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12), 0 0 34px rgba(65, 231, 255, 0.34);
+}
+
+.primary-btn.is-saved {
+  background: linear-gradient(90deg, var(--green), var(--cyan));
+  color: #03071e;
+  box-shadow: 0 0 0 5px rgba(111, 255, 178, 0.18), 0 0 38px rgba(111, 255, 178, 0.35);
+}
+
+.primary-btn.is-tapped::after,
+.primary-btn.is-saved::after {
+  opacity: 1;
+  animation: buttonShine 760ms ease forwards;
+}
+
+@keyframes buttonShine {
+  from {
+    left: -60%;
+  }
+  to {
+    left: 125%;
+  }
 }
 
 .danger-btn {
@@ -313,6 +352,8 @@ button:disabled {
 
 .modal-card {
   width: min(520px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
@@ -329,6 +370,25 @@ button:disabled {
   font-weight: 900;
 }
 
+.choice-score-summary {
+  display: grid;
+  gap: 7px;
+  margin: -4px 0 14px;
+}
+
+.choice-score-summary span {
+  border: 1px solid rgba(111, 255, 178, 0.24);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(111, 255, 178, 0.09);
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.choice-score-summary strong {
+  color: var(--green);
+}
+
 .choice-lookup {
   display: grid;
   gap: 10px;
@@ -339,8 +399,14 @@ button:disabled {
   margin: 0;
 }
 
-.share-choice-btn {
+.share-choice-grid {
+  display: grid;
+  gap: 9px;
   margin: 0 0 16px;
+}
+
+.share-choice-btn {
+  min-height: 40px;
 }
 
 .choice-list {
@@ -487,6 +553,15 @@ select {
 
 select {
   font-weight: 900;
+}
+
+.selected-entry-hint {
+  min-height: 17px;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 select:invalid {
