@@ -1,6 +1,7 @@
 const STORAGE_KEY = "ted-tio-songfestival-speelkopie-2026";
 const ADMIN_KEY = "songfestival-admin-pin";
 const MY_CHOICE_KEY = "songfestival-my-choice-name";
+const OWNER_TOKEN_PREFIX = "songfestival-owner-token-";
 const API_MODE = location.protocol === "http:" || location.protocol === "https:";
 
 const defaultCountries = [
@@ -263,6 +264,25 @@ async function persistLocalOrRefresh(action) {
 function countryLabel(name) {
   const country = state.countries.find((item) => item.name === name);
   return country?.entry ? `${country.name} (${country.entry})` : name;
+}
+
+function ownerKeyForName(name) {
+  return `${OWNER_TOKEN_PREFIX}${String(name || "").trim().toLowerCase()}`;
+}
+
+function createOwnerToken() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function ownerTokenForName(name) {
+  const key = ownerKeyForName(name);
+  let token = localStorage.getItem(key);
+  if (!token) {
+    token = createOwnerToken();
+    localStorage.setItem(key, token);
+  }
+  return token;
 }
 
 function videoSearchUrl(country) {
@@ -852,14 +872,16 @@ function emptyPrediction() {
 
 function participantFromPhase(phase) {
   const name = el.playerName.value.trim();
+  const ownerToken = name ? ownerTokenForName(name) : "";
   if (phase === "semi1" || phase === "semi2") {
     const container = phase === "semi1" ? el.semi1Predictions : el.semi2Predictions;
-    return { name, phase, prediction: { [phase]: checkedValues(container) } };
+    return { name, ownerToken, phase, prediction: { [phase]: checkedValues(container) } };
   }
 
   const formData = new FormData(el.predictionForm);
   return {
     name,
+    ownerToken,
     phase,
     prediction: {
       top5: ["top1", "top2", "top3", "top4", "top5"].map((key) => formData.get(key)),

@@ -98,6 +98,7 @@ function normalizeCountry(country) {
 function normalizePlayer(player) {
   return {
     ...player,
+    ownerTokenHash: String(player.ownerTokenHash || ""),
     attendingParty: Boolean(player.attendingParty),
     prediction: {
       top5: Array.isArray(player.prediction?.top5) ? player.prediction.top5 : [],
@@ -105,6 +106,13 @@ function normalizePlayer(player) {
       semi1: Array.isArray(player.prediction?.semi1) ? player.prediction.semi1 : [],
       semi2: Array.isArray(player.prediction?.semi2) ? player.prediction.semi2 : []
     }
+  };
+}
+
+function publicState(state) {
+  return {
+    ...state,
+    participants: state.participants.map(({ ownerTokenHash, ...player }) => player)
   };
 }
 
@@ -320,6 +328,20 @@ function requireAdmin(req) {
   }
 }
 
+function hashOwnerToken(token) {
+  return crypto.createHash("sha256").update(String(token || "")).digest("hex");
+}
+
+function requirePredictionOwner(player, ownerToken) {
+  const token = String(ownerToken || "").trim();
+  if (!token) throw new Error("Deze naam is beveiligd. Sla op vanaf je eigen apparaat/browser.");
+  const tokenHash = hashOwnerToken(token);
+  if (player.ownerTokenHash && player.ownerTokenHash !== tokenHash) {
+    throw new Error("Deze naam is al door iemand anders gebruikt. Je kunt alleen je eigen voorspelling aanpassen.");
+  }
+  player.ownerTokenHash = tokenHash;
+}
+
 function getFinalCountryNames(state) {
   return [...new Set([
     ...automaticFinalists,
@@ -334,6 +356,7 @@ function hasCompleteFinalistList(state) {
 
 function validatePrediction(state, payload, existingId = "") {
   const name = String(payload.name || "").trim().slice(0, 60);
+  const ownerToken = String(payload.ownerToken || "").trim();
   const attendingParty = Boolean(payload.attendingParty);
   const top5 = payload.prediction?.top5 || [];
   const last = payload.prediction?.last || "";
@@ -352,12 +375,13 @@ function validatePrediction(state, payload, existingId = "") {
   if (state.participants.some((player) => player.id !== existingId && player.name.toLowerCase() === name.toLowerCase())) {
     throw new Error("Deze naam staat al in de poule.");
   }
-  return { name, attendingParty, prediction: { top5, last, semi1, semi2 } };
+  return { name, ownerToken, attendingParty, prediction: { top5, last, semi1, semi2 } };
 }
 
 function validatePhasePrediction(state, body) {
   const phase = String(body.phase || "");
   const name = String(body.name || "").trim().slice(0, 60);
+  const ownerToken = String(body.ownerToken || "").trim();
   const attendingParty = Boolean(body.attendingParty);
   const prediction = body.prediction || {};
   const countryNames = getFinalCountryNames(state);
@@ -371,7 +395,7 @@ function validatePhasePrediction(state, body) {
     if (picks.length !== 10) throw new Error("Kies precies 10 landen.");
     if (new Set(picks).size !== picks.length) throw new Error("Een land mag maar een keer worden gekozen.");
     if (picks.some((pick) => !semiFinals[phase].includes(pick))) throw new Error("Deze ronde bevat een ongeldig land.");
-    return { phase, name, attendingParty, picks };
+    return { phase, name, ownerToken, attendingParty, picks };
   }
 
   const top5 = Array.isArray(prediction.top5) ? prediction.top5 : [];
@@ -380,7 +404,7 @@ function validatePhasePrediction(state, body) {
   if (!hasCompleteFinalistList(state)) throw new Error("De finalelijst is nog niet compleet.");
   if (top5.length !== 5 || picks.some((pick) => !countryNames.includes(pick))) throw new Error("Kies overal een geldig land.");
   if (new Set(picks).size !== picks.length) throw new Error("Een land mag maar een keer in dezelfde voorspelling staan.");
-  return { phase, name, attendingParty, top5, last };
+  return { phase, name, ownerToken, attendingParty, top5, last };
 }
 
 function mergePhasePrediction(player, payload) {
@@ -411,7 +435,7 @@ async function handleApi(req, res, url) {
       hasDatabaseUrl: Boolean(DATABASE_URL)
     });
   }
-  if (req.method === "GET" && url.pathname === "/api/state") return sendJson(res, 200, await readState());
+  if (req.method === "GET" && url.pathname === "/api/state") return sendJson(res, 200, publicState(await readState()));
   if (req.method === "POST" && url.pathname === "/api/admin/check") {
     requireAdmin(req);
     return sendJson(res, 200, { ok: true });
@@ -421,10 +445,13 @@ async function handleApi(req, res, url) {
     const body = await parseBody(req);
     const next = await updateState((state) => {
       const payload = validatePrediction(state, body);
-      state.participants.push({ id: crypto.randomUUID(), ...payload, createdAt: new Date().toISOString() });
+      const player = { id: crypto.randomUUID(), ...payload, ownerTokenHash: "", createdAt: new Date().toISOString() };
+      delete player.ownerToken;
+      requirePredictionOwner(player, payload.ownerToken);
+      state.participants.push(player);
       return state;
     });
-    return sendJson(res, 201, next);
+    return sendJson(res, 201, publicState(next));
   }
 
   if (req.method === "POST" && url.pathname === "/api/predictions/phase") {
@@ -433,19 +460,23 @@ async function handleApi(req, res, url) {
       const payload = validatePhasePrediction(state, body);
       const index = state.participants.findIndex((player) => player.name.toLowerCase() === payload.name.toLowerCase());
       if (index === -1) {
-        state.participants.push(mergePhasePrediction({
+        const player = mergePhasePrediction({
           id: crypto.randomUUID(),
           name: payload.name,
+          ownerTokenHash: "",
           attendingParty: payload.attendingParty,
           prediction: { top5: [], last: "", semi1: [], semi2: [] },
           createdAt: new Date().toISOString()
-        }, payload));
+        }, payload);
+        requirePredictionOwner(player, payload.ownerToken);
+        state.participants.push(player);
       } else {
+        requirePredictionOwner(state.participants[index], payload.ownerToken);
         state.participants[index] = mergePhasePrediction(state.participants[index], payload);
       }
       return state;
     });
-    return sendJson(res, 200, next);
+    return sendJson(res, 200, publicState(next));
   }
 
   const predictionMatch = url.pathname.match(/^\/api\/predictions\/([^/]+)$/);
